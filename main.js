@@ -5,9 +5,9 @@ var bodyParser = require('body-parser');
 var bcrypt = require('bcrypt');
 var path = require('path');
 var cookieParser = require('cookie-parser');
-require('./generate-user');
+var crypto = require('crypto');
 
-app.use(cookieParser());
+app.use(cookieParser(crypto.randomBytes(64).toString('base64')));
 app.use(bodyParser.json());
 
 var MongoClient = mongo.MongoClient;
@@ -36,14 +36,16 @@ app.post('/api/login', function(req, res) {
                         // Authenticate user
                     // Else
                         // Send back to login page
+                        console.log(user);
                     if (user.passwordHash == hash) {
                         isLoggedIn = true;
                         console.log('passwords match');
                         res.clearCookie('isLoggedIn');
                         res.cookie('isLoggedIn', 'yes', {
-                            httpOnly: true
+                            httpOnly: true,
+                            signed: true
                         });
-                        console.log('new cookies', req.cookies.isLoggedIn);
+                        console.log('new cookies', req.signedCookies);
                         res.send({
                             isLoggedIn: true,
                             error: null
@@ -51,8 +53,7 @@ app.post('/api/login', function(req, res) {
                         console.log('authenticated user');
                     } else {
                         res.clearCookie('isLoggedIn', {
-                            httpOnly: true,
-                            secure: true
+                            httpOnly: true
                         });
                         res.send({
                             isLoggedIn: false,
@@ -67,6 +68,10 @@ app.post('/api/login', function(req, res) {
                     console.log(err);
                     console.log('username not found');
                     isLoggedIn = false;
+                    res.send({
+                        isLoggedIn: false,
+                        error: 'username'
+                    });
                 }
             });
     });
@@ -79,8 +84,8 @@ app.get('/', function(req, res) {
     res.redirect('/err/none');
     */
     // If has logged in cookie
-    console.log(req.cookies);
-    if (req.cookies.isLoggedIn) {
+    console.log(req.signedCookies);
+    if (req.signedCookies.isLoggedIn) {
         // Display members page
         res.sendFile(path.join(__dirname, 'static/members.html'));
         console.log('serving members page');
@@ -89,17 +94,17 @@ app.get('/', function(req, res) {
         // Display login page
         res.sendFile(path.join(__dirname, 'static/login.html'))
         console.log('serving login page');
-     }
+    }
 });
 
 app.get('/calendar', function(req, res) {
-    if (req.cookies.isLoggedIn) {
+    if (req.signedCookies.isLoggedIn) {
         res.sendFile(path.join(__dirname, 'static/calendar.html'));
         console.log('serving calendar');
     } else {
         res.sendFile(path.join(__dirname, 'static/login.html'));
     }
-})
+});
 
 app.get('/login.js', function(req, res) {
     res.sendFile(path.join(__dirname, 'static/js/login.js'));

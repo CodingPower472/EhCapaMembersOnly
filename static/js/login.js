@@ -24,6 +24,14 @@ function sendInfo() {
                 location.href = '/';
             } else {
                 console.log('not logged in');
+                $('#username').val('');
+                $('#password').val('');
+                $('#username').focus();
+                if (data.error == 'password') {
+                    $('#error').text('Incorrect username or password');
+                } else {
+                    $('#error').text('Incorrect username');
+                }
             }
         })
         .catch(function(err) {
